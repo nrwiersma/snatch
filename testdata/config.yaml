@@ -1,0 +1,2 @@
+db: http://localhost:8086/metrics
+res: 10s

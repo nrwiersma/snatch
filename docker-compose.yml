@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  influx:
+    image: influxdb:1.6-alpine
+    ports:
+      - 8086:8086
+    environment:
+      - INFLUXDB_DB=metrics
+
+  grafana:
+    image: grafana/grafana:5.3.2
+    ports:
+      - 3000:3000
+    links:
+      - influx

@@ -1,0 +1,34 @@
+sudo: false
+
+language: go
+go:
+  - "1.11"
+
+env:
+  - GO111MODULE=on
+
+before_install:
+  - go get -u golang.org/x/lint/golint
+  - go get github.com/mitchellh/gox
+  - go get -u github.com/mattn/goveralls
+
+script:
+  - golint ./...
+  - go vet ./...
+  - go test -covermode=count -coverprofile=profile.cov ./...
+  - goveralls -coverprofile=profile.cov -service=travis-ci
+
+before_deploy:
+  - gox -ldflags "-s -X main.Version=$(git describe --tags --always)" -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" ./cmd/snatch/
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file_glob: true
+  file: dist/*
+  skip_cleanup: true
+  on:
+    tags: true
+
+notifications:
+  email: false
