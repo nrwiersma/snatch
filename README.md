@@ -11,6 +11,17 @@
 Snatch is a l2met parser that inserts the data into InfluxDB. If it cannot parse the line, it outputs
 back to stdout.
 
+Snatch parse metrics in `logfmt` format that looks like
+```
+t="1983-02-21T01:23:45+0200" lvl=info msg= count#test=2 foo="bar" size=10
+```
+
+While not standard, snatch handles sampling. You can add the sample rate at the end of the
+name separated by an `@` like
+```
+t="1983-02-21T01:23:45-0400" lvl=info msg= count#test@0.1=2 foo="bar" size=10
+``` 
+
 ## Installation
 
 Download the [binary](https://github.com/nrwiersma/snatch/releases) or

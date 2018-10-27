@@ -54,7 +54,7 @@ func TestParser_ParseErrorsOnInvalidMetrics(t *testing.T) {
 	}
 }
 
-func TestParser_ParseHandlescount(t *testing.T) {
+func TestParser_ParseHandlesCount(t *testing.T) {
 	m := []byte("count#prefix.test=2")
 	p := snatch.NewParser(30 * time.Second)
 
@@ -158,8 +158,8 @@ func TestParser_ParseHandlesRates(t *testing.T) {
 			vals:   []float64{2.3},
 		},
 		{
-			metric: []byte("measure#test@0.1=2.3ms"),
-			vals:   []float64{2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3},
+			metric: []byte("measure#test@0.2=2.3ms"),
+			vals:   []float64{2.3, 2.3, 2.3, 2.3, 2.3},
 		},
 	}
 

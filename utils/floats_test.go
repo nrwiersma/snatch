@@ -3,8 +3,8 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/nrwiersma/snatch/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSort(t *testing.T) {

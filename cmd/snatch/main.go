@@ -17,6 +17,8 @@ const (
 	flagConfig = "config"
 )
 
+var version = "¯\\_(ツ)_/¯"
+
 var flags = []cli.Flag{
 	altsrc.NewStringFlag(&cli.StringFlag{
 		Name:  flagDbDsn,
@@ -49,6 +51,7 @@ func main() {
 	app := cli.App{}
 	app.Name = "snatch"
 	app.Usage = "Reads l2met from stdin, sending them to the specified database"
+	app.Version = version
 	app.Before = altsrc.InitInputSourceWithContext(flags, newYamlSourceFromFlagFunc(flagConfig))
 	app.Flags = flags
 	app.Action = runReader

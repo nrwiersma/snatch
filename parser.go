@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/kr/logfmt"
 	"strconv"
 	"time"
-
-	"github.com/kr/logfmt"
 )
 
 var (
@@ -47,31 +46,20 @@ func (t *tuple) String() string {
 
 // Float64 splits the value into a float and its units.
 func (t *tuple) Float64() (float64, string, error) {
-	digits := make([]byte, 0)
-	foundDecimal := false
+	pos := 0
 	for i := range t.Val {
-		b := t.Val[i]
-		if b == '.' && !foundDecimal {
-			foundDecimal = true
-			digits = append(digits, b)
+		if (t.Val[i] >= '0' && t.Val[i] <= '9') ||
+			t.Val[i] == '.' || t.Val[i] == '-' {
+			pos++
 			continue
 		}
 
-		if b == '-' {
-			digits = append(digits, b)
-			continue
-		}
-
-		if b < '0' || b > '9' {
-			break
-		}
-
-		digits = append(digits, b)
+		break
 	}
 
-	if len(digits) > 0 {
-		units := string(t.Val[len(digits):])
-		v, err := strconv.ParseFloat(string(digits), 10)
+	if pos > 0 {
+		units := string(t.Val[pos:])
+		v, err := strconv.ParseFloat(string(t.Val[:pos]), 10)
 		if err != nil {
 			return 0, "", err
 		}
@@ -79,23 +67,19 @@ func (t *tuple) Float64() (float64, string, error) {
 		return v, units, nil
 	}
 
-	return 0, "", errors.New("Unable to parse float")
+	return 0, "", errors.New("unable to parse float")
 }
 
 type scanner struct {
 	Tuples tuples
 }
 
-func (ld *scanner) Scan(d []byte) error {
-	if err := logfmt.Unmarshal(d, &ld.Tuples); err != nil {
-		return err
-	}
-
-	return nil
+func (s *scanner) Scan(b []byte) error {
+	return logfmt.Unmarshal(b, &s.Tuples)
 }
 
-func (ld *scanner) Reset() {
-	ld.Tuples = ld.Tuples[:0]
+func (s *scanner) Reset() {
+	s.Tuples = s.Tuples[:0]
 }
 
 // Parser parses l2met metrics.
@@ -119,9 +103,9 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 		return nil, fmt.Errorf("parser: error parsing line: %s", err)
 	}
 
-	ts := time.Now()
-	var tags []string
-	var bkts []*Bucket
+	var ts time.Time
+	tags := make([]string, 0, len(p.s.Tuples)*2)
+	bkts := make([]*Bucket, 0 ,2)
 	for _, t := range p.s.Tuples {
 		if bytes.Equal(t.Key, timePrefix) {
 			ts = p.parseTime(t)
@@ -145,6 +129,10 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 		tags = append(tags, t.Name(), t.String())
 	}
 
+	if ts.IsZero() {
+		ts = time.Unix(0, int64((time.Duration(time.Now().UnixNano())/p.res)*p.res))
+	}
+
 	for _, bkt := range bkts {
 		bkt.ID.Time = ts
 		bkt.ID.Tags = tags
@@ -156,18 +144,14 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 func (p *Parser) parseTime(t *tuple) time.Time {
 	ts, err := time.Parse(timeFormat, t.String())
 	if err != nil {
-		ts = time.Now()
+		return time.Time{}
 	}
 
 	return time.Unix(0, int64((time.Duration(ts.UnixNano())/p.res)*p.res))
 }
 
 func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
-	split := bytes.Split(t.Key, measureSeparator)
-	if len(split) < 2 {
-		return nil, errors.New("parser: error splitting '@'")
-	}
-
+	split := bytes.SplitN(t.Key, measureSeparator, 2)
 	id := &ID{
 		Type: string(split[0]),
 	}
@@ -176,15 +160,7 @@ func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 		return nil, errors.New("parser: zero length name")
 	}
 
-	name := split[1]
-	rate := float64(0)
-	rateSplit := bytes.Split(split[1], rateSeparator)
-	if len(rateSplit) > 1 {
-		name = rateSplit[0]
-		if f, err := strconv.ParseFloat(string(rateSplit[1][1:]), 64); err == nil {
-			rate = f
-		}
-	}
+	name, rate := p.splitRate(split[1])
 	id.Name = string(name)
 
 	bkt := &Bucket{
@@ -193,7 +169,7 @@ func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 
 	v, units, err := t.Float64()
 	if err != nil {
-		return nil, errors.New("parser: invalid counter value: " + t.String())
+		return nil, errors.New("parser: invalid float value: " + t.String())
 	}
 	bkt.Units = units
 
@@ -221,4 +197,17 @@ func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 	}
 
 	return bkt, nil
+}
+
+func (p *Parser) splitRate(b []byte) ([]byte, float64) {
+	if !bytes.Contains(b, rateSeparator) {
+		return b, 0
+	}
+
+	split := bytes.SplitN(b, rateSeparator, 2)
+	if f, err := strconv.ParseFloat(string(split[1]), 64); err == nil {
+		return split[0], f
+	}
+
+	return split[0], 0
 }
