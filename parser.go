@@ -105,7 +105,7 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 
 	var ts time.Time
 	tags := make([]string, 0, len(p.s.Tuples)*2)
-	bkts := make([]*Bucket, 0 ,2)
+	bkts := make([]*Bucket, 0, 2)
 	for _, t := range p.s.Tuples {
 		if bytes.Equal(t.Key, timePrefix) {
 			ts = p.parseTime(t)

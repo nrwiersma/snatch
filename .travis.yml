@@ -19,7 +19,7 @@ script:
   - goveralls -coverprofile=profile.cov -service=travis-ci
 
 before_deploy:
-  - gox -ldflags "-s -X main.Version=$(git describe --tags --always)" -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" ./cmd/snatch/
+  - gox -ldflags "-s -X main.version=$(git describe --tags --always)" -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}" ./cmd/snatch/
 
 deploy:
   provider: releases

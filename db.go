@@ -11,6 +11,8 @@ import (
 type DB interface {
 	// Insert inserts the Buckets into the database.
 	Insert([]*Bucket) error
+	// Close closes the database.
+	Close() error
 }
 
 type influxDB struct {
@@ -28,24 +30,18 @@ func NewDB(c client.Client, database string) DB {
 
 // Insert inserts the Buckets into InfluxDB.
 func (db *influxDB) Insert(bkts []*Bucket) error {
-	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  db.database,
 		Precision: "s",
 	})
-	if err != nil {
-		return err
-	}
 
 	for _, bkt := range bkts {
-		p, err := client.NewPoint(
+		p, _ := client.NewPoint(
 			db.formatName(bkt.ID.Name),
 			db.formatTags(bkt.ID.Tags),
 			db.formatValues(bkt),
 			bkt.ID.Time,
 		)
-		if err != nil {
-			return err
-		}
 
 		bp.AddPoint(p)
 	}
@@ -89,4 +85,9 @@ func (db *influxDB) formatValues(b *Bucket) map[string]interface{} {
 	}
 
 	return v
+}
+
+// Close closes the database.
+func (db *influxDB) Close() error {
+	return db.c.Close()
 }

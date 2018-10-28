@@ -16,6 +16,7 @@ func runReader(c *cli.Context) error {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	defer db.Close()
 
 	store := newStore(res)
 
