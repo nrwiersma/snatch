@@ -11,17 +11,6 @@
 Snatch is a l2met parser that inserts the data into InfluxDB. If it cannot parse the line, it outputs
 back to stdout.
 
-Snatch parse metrics in `logfmt` format that looks like
-```
-t="1983-02-21T01:23:45+0200" lvl=info msg= count#test=2 foo="bar" size=10
-```
-
-While not standard, snatch handles sampling. You can add the sample rate at the end of the
-name separated by an `@` like
-```
-t="1983-02-21T01:23:45-0400" lvl=info msg= count#test@0.1=2 foo="bar" size=10
-``` 
-
 ## Installation
 
 Download the [binary](https://github.com/nrwiersma/snatch/releases) or
@@ -31,6 +20,21 @@ $ go get github.com/nrwiersma/snatch/cmd/snatch
 ```
 
 ## Usage
+
+Snatch parse metrics in `logfmt` lines from `stdin` in the format
+```
+t="1983-02-21T01:23:45+0200" lvl=info msg= count#test=2 foo="bar" size=10
+```
+
+The time is optional, defaulting to now, and the `lvl` and `msg` will be ignored in the metrics.
+All other non-metric pieces will be used as tags in the metric.
+
+While not standard, snatch handles sampling. You can add the sample rate at the end of the
+name separated by an `@`
+
+```
+t="1983-02-21T01:23:45-0400" lvl=info msg= count#test@0.1=2 foo="bar" size=10
+``` 
 
 Snatch requires the `--db` flag with the DSN of InfluxDB in the format
 
@@ -48,4 +52,11 @@ Setting these options can be tedious, so a YAML config file can be used (default
 
 ```bash
 $ snatch --config=testdata/config.yaml
+```
+
+which is in the form
+
+```yaml
+db: http://localhost:8086/metrics
+res: 30s
 ```
