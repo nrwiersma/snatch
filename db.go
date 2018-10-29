@@ -66,13 +66,13 @@ func (db *influxDB) formatValues(b *Bucket) map[string]interface{} {
 	v := map[string]interface{}{}
 
 	switch b.ID.Type {
-	case "count":
+	case Count:
 		v["value"] = b.Sum
 
-	case "sample":
+	case Sample:
 		v["value"] = b.Vals[len(b.Vals)-1]
 
-	case "measure":
+	case Measure:
 		v["90_percentile"] = utils.Percentile(b.Vals, 90)
 		v["95_percentile"] = utils.Percentile(b.Vals, 95)
 		v["97_percentile"] = utils.Percentile(b.Vals, 97)

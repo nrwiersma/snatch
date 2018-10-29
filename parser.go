@@ -10,13 +10,9 @@ import (
 )
 
 var (
-	timePrefix  = []byte{'t'}
-	levelPrefix = []byte("lvl")
-	msgPrefix   = []byte("msg")
-
-	countPrefix   = "count"
-	measurePrefix = "measure"
-	samplePrefix  = "sample"
+	timeKey  = []byte{'t'}
+	levelKey = []byte("lvl")
+	msgKey   = []byte("msg")
 
 	measureSeparator = []byte{'#'}
 	rateSeparator    = []byte{'@'}
@@ -26,7 +22,12 @@ var (
 
 type tuples []*tuple
 
+// HandleLogfmt implements the logfmt.Handler interface.
 func (t *tuples) HandleLogfmt(k, v []byte) error {
+	if bytes.Equal(k, levelKey) || bytes.Equal(k, msgKey) {
+		return nil
+	}
+
 	*t = append(*t, &tuple{k, v})
 	return nil
 }
@@ -36,10 +37,12 @@ type tuple struct {
 	Val []byte
 }
 
+// Name returns the Key as a string.
 func (t *tuple) Name() string {
 	return string(t.Key)
 }
 
+// String returns the Val as a string.
 func (t *tuple) String() string {
 	return string(t.Val)
 }
@@ -57,27 +60,30 @@ func (t *tuple) Float64() (float64, string, error) {
 		break
 	}
 
-	if pos > 0 {
-		units := string(t.Val[pos:])
-		v, err := strconv.ParseFloat(string(t.Val[:pos]), 10)
-		if err != nil {
-			return 0, "", err
-		}
-
-		return v, units, nil
+	if pos == 0 {
+		return 0, "", errors.New("unable to parse float")
 	}
 
-	return 0, "", errors.New("unable to parse float")
+	units := string(t.Val[pos:])
+	v, err := strconv.ParseFloat(string(t.Val[:pos]), 10)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return v, units, nil
+
 }
 
 type scanner struct {
 	Tuples tuples
 }
 
+// Scan scans for Tuples for the logfmt line.
 func (s *scanner) Scan(b []byte) error {
 	return logfmt.Unmarshal(b, &s.Tuples)
 }
 
+// Reset clears the scanner.
 func (s *scanner) Reset() {
 	s.Tuples = s.Tuples[:0]
 }
@@ -107,13 +113,8 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 	tags := make([]string, 0, len(p.s.Tuples)*2)
 	bkts := make([]*Bucket, 0, 2)
 	for _, t := range p.s.Tuples {
-		if bytes.Equal(t.Key, timePrefix) {
-			ts = p.parseTime(t)
-			continue
-		}
-
-		if bytes.Equal(t.Key, levelPrefix) || bytes.Equal(t.Key, msgPrefix) {
-			//Ignore level and msg
+		if bytes.Equal(t.Key, timeKey) {
+			ts = p.parseTime(t.Val)
 			continue
 		}
 
@@ -130,8 +131,9 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 	}
 
 	if ts.IsZero() {
-		ts = time.Unix(0, int64((time.Duration(time.Now().UnixNano())/p.res)*p.res))
+		ts = time.Now()
 	}
+	ts = time.Unix(0, int64((time.Duration(ts.UnixNano())/p.res)*p.res))
 
 	for _, bkt := range bkts {
 		bkt.ID.Time = ts
@@ -141,19 +143,19 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 	return bkts, nil
 }
 
-func (p *Parser) parseTime(t *tuple) time.Time {
-	ts, err := time.Parse(timeFormat, t.String())
+func (p *Parser) parseTime(b []byte) time.Time {
+	ts, err := time.Parse(timeFormat, string(b))
 	if err != nil {
 		return time.Time{}
 	}
 
-	return time.Unix(0, int64((time.Duration(ts.UnixNano())/p.res)*p.res))
+	return ts
 }
 
 func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 	split := bytes.SplitN(t.Key, measureSeparator, 2)
 	id := &ID{
-		Type: string(split[0]),
+		Type: Type(split[0]),
 	}
 
 	if len(split[1]) == 0 {
@@ -174,16 +176,16 @@ func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 	bkt.Units = units
 
 	switch id.Type {
-	case countPrefix:
+	case Count:
 		if rate != 0 {
 			v /= rate
 		}
 		bkt.Append(v)
 
-	case samplePrefix:
+	case Sample:
 		bkt.Append(v)
 
-	case measurePrefix:
+	case Measure:
 		if rate != 0 {
 			for i := 0; i < int(1.0/rate); i++ {
 				bkt.Append(v)

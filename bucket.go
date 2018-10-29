@@ -5,17 +5,27 @@ import (
 	"time"
 )
 
+// Type constants.
+const (
+	Count   Type = "count"
+	Sample  Type = "sample"
+	Measure Type = "measure"
+)
+
+// Type represents a metric type
+type Type string
+
 // ID represents a Buckets identity.
 type ID struct {
 	Time time.Time
 	Name string
 	Tags []string
-	Type string
+	Type Type
 }
 
 // Keys returns the timestamp and key of an ID.
 func (id *ID) Keys() (int64, string) {
-	s := id.Type + ":" + id.Name + ":" + strings.Join(id.Tags, ",")
+	s := string(id.Type) + ":" + id.Name + ":" + strings.Join(id.Tags, ",")
 
 	return id.Time.Unix(), s
 }
