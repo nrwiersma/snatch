@@ -27,11 +27,26 @@ t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10`)
 
 	db := new(mockDB)
 	s := new(mockStore)
-	s.On("Add", mock.Anything).Return(nil)
+	s.On("Add", mock.Anything).Return(0, nil)
 	app := snatch.NewApplication(10*time.Second, db, s)
 
 	err := app.Parse(bytes.NewReader(b), func(b []byte) {
 		assert.Equal(t, []byte("test\n"), b)
+	})
+
+	assert.NoError(t, err)
+}
+
+func TestApplication_ParseError(t *testing.T) {
+	b := []byte(`t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10`)
+
+	db := new(mockDB)
+	s := new(mockStore)
+	s.On("Add", mock.Anything).Return(3, nil)
+	app := snatch.NewApplication(10*time.Second, db, s)
+
+	err := app.Parse(bytes.NewReader(b), func(b []byte) {
+		assert.Equal(t, []byte("snatch: dropped expired lines\n"), b)
 	})
 
 	assert.NoError(t, err)
@@ -42,7 +57,7 @@ func TestApplication_ParseStoreError(t *testing.T) {
 
 	db := new(mockDB)
 	s := new(mockStore)
-	s.On("Add", mock.Anything).Return(errors.New("test"))
+	s.On("Add", mock.Anything).Return(0, errors.New("test"))
 	app := snatch.NewApplication(10*time.Second, db, s)
 
 	err := app.Parse(bytes.NewReader(b), func(b []byte) {})

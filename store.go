@@ -7,7 +7,7 @@ import (
 // Store represents a Bucket store.
 type Store interface {
 	// Add adds Buckets into the Store.
-	Add(...*Bucket) error
+	Add(...*Bucket) (int, error)
 	// Scan scans the store for complete Buckets.
 	Scan() (<-chan *Bucket, error)
 	// Flush flushes all Buckets from the Store.
@@ -29,8 +29,14 @@ func NewStore(res time.Duration) Store {
 }
 
 // Add adds Buckets into the Store.
-func (s *memStore) Add(bkts ...*Bucket) error {
+func (s *memStore) Add(bkts ...*Bucket) (int, error) {
+	expired := 0
 	for _, bkt := range bkts {
+		if bkt.ID.Time.Add(s.res + time.Second).Before(time.Now()) {
+			expired++
+			continue
+		}
+
 		ts, key := bkt.ID.Keys()
 
 		box, ok := s.store[ts]
@@ -49,14 +55,14 @@ func (s *memStore) Add(bkts ...*Bucket) error {
 		box[key] = bkt
 	}
 
-	return nil
+	return expired, nil
 }
 
 // Scan scans the store for complete Buckets.
 func (s *memStore) Scan() (<-chan *Bucket, error) {
 	buckets := make(chan *Bucket, 1000)
 	go func(out chan *Bucket) {
-		ready := time.Now().Add(-1 * s.res).Add(-1 * time.Second).Unix()
+		ready := time.Now().Add(-1 * (s.res + time.Second)).Unix()
 
 		for ts, box := range s.store {
 			if ts >= ready {

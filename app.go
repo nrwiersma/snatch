@@ -35,8 +35,13 @@ func (a *Application) Parse(r io.Reader, fn func([]byte)) error {
 				continue
 			}
 
-			if err := a.s.Add(bkts...); err != nil {
+			expired, err := a.s.Add(bkts...)
+			if err != nil {
 				return err
+			}
+
+			if expired > 0 {
+				fn([]byte("snatch: dropped expired lines\n"))
 			}
 		}
 
