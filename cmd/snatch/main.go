@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"path"
 	"time"
 
 	"gopkg.in/urfave/cli.v2"
@@ -39,6 +41,15 @@ var flags = []cli.Flag{
 func newYamlSourceFromFlagFunc(flagFileName string) func(context *cli.Context) (altsrc.InputSourceContext, error) {
 	return func(context *cli.Context) (altsrc.InputSourceContext, error) {
 		filePath := context.String(flagFileName)
+		if filePath[0] == '~' {
+			u, err  := user.Current()
+			if err != nil {
+				return nil, err
+			}
+
+			filePath = path.Join(u.HomeDir, filePath[1:])
+		}
+
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			return &altsrc.MapInputSource{}, nil
 		}

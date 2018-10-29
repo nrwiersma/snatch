@@ -67,7 +67,7 @@ func (db *influxDB) formatValues(b *Bucket) map[string]interface{} {
 
 	switch b.ID.Type {
 	case Count:
-		v["value"] = b.Sum
+		v["value"] = int64(b.Sum)
 
 	case Sample:
 		v["value"] = b.Vals[len(b.Vals)-1]

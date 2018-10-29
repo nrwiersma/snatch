@@ -60,7 +60,7 @@ func TestInfluxDB_Insert(t *testing.T) {
 		p, _ := client.NewPoint(
 			"foo_bar_counter",
 			map[string]string{"tag": "example"},
-			map[string]interface{}{"value": float64(10)},
+			map[string]interface{}{"value": int64(10)},
 			time.Now().Truncate(time.Minute),
 		)
 		assert.Equal(t, p, ps[0])
