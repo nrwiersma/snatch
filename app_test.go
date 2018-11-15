@@ -30,7 +30,7 @@ lvl=info msg= count#test=2 foo="bar" size=10
 	s := new(mockStore)
 	s.On("Add", mock.Anything).Return(nil)
 	app := snatch.NewApplication(10*time.Second, db, s)
-	opts := snatch.ParseOpts{BufferSize:10, AllowedPending: 2}
+	opts := snatch.ParseOpts{BufferSize: 10, AllowedPending: 2}
 
 	err := app.Parse(bytes.NewReader(b), opts, func(b []byte) {
 		assert.Equal(t, []byte("test\n"), b)
@@ -55,7 +55,7 @@ lvl=info msg= count#test=2 foo="bar" size=10
 	s := new(mockStore)
 	s.On("Add", mock.Anything).Return(nil)
 	app := snatch.NewApplication(10*time.Second, db, s)
-	opts := snatch.ParseOpts{BufferSize:10, AllowedPending: 1}
+	opts := snatch.ParseOpts{BufferSize: 10, AllowedPending: 1}
 
 	err := app.Parse(bytes.NewReader(b), opts, func(b []byte) {
 		assert.Equal(t, []byte("test\n"), b)

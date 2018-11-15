@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/kr/logfmt"
 	"strconv"
 	"time"
+
+	"github.com/kr/logfmt"
 )
 
 var (

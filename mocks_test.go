@@ -1,10 +1,10 @@
 package snatch_test
 
 import (
-	"github.com/nrwiersma/snatch"
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
+	"github.com/nrwiersma/snatch"
 	"github.com/stretchr/testify/mock"
 )
 

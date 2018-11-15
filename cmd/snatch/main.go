@@ -16,7 +16,7 @@ const (
 
 	flagResolution = "res"
 
-	flagParserBatch = "parser.batch"
+	flagParserBatch        = "parser.batch"
 	flagParserAllowPending = "parser.allow-pending"
 
 	flagConfig = "config"
@@ -55,7 +55,7 @@ func newYamlSourceFromFlagFunc(flagFileName string) func(context *cli.Context) (
 	return func(context *cli.Context) (altsrc.InputSourceContext, error) {
 		filePath := context.String(flagFileName)
 		if filePath[0] == '~' {
-			u, err  := user.Current()
+			u, err := user.Current()
 			if err != nil {
 				return nil, err
 			}

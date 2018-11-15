@@ -25,6 +25,7 @@ func NewApplication(res time.Duration, db DB, s Store) *Application {
 	}
 }
 
+// ParseOpts repesents parser options.
 type ParseOpts struct {
 	BufferSize     int
 	AllowedPending int
