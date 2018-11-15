@@ -55,10 +55,9 @@ func TestMemStore_Put(t *testing.T) {
 	}
 	s := snatch.NewStore(10 * time.Second)
 
-	expired, err := s.Add(bkts...)
+	err := s.Add(bkts...)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 0, expired)
 	out, _ := s.Flush()
 	var sum float64
 	for bkt := range out {
@@ -109,28 +108,40 @@ func TestMemStore_PutExpired(t *testing.T) {
 	}
 	s := snatch.NewStore(10 * time.Second)
 
-	expired, err := s.Add(bkts...)
+	err := s.Add(bkts...)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 3, expired)
 
 }
 
 func BenchmarkMemStore_Put(b *testing.B) {
 	s := snatch.NewStore(10 * time.Second)
+	bkt := &snatch.Bucket{
+		ID: &snatch.ID{
+			Time: time.Now(),
+			Name: "foo",
+			Type: "count",
+		},
+		Vals: []float64{1},
+		Sum:  1,
+	}
+	bkt2 := &snatch.Bucket{
+		ID: &snatch.ID{
+			Time: time.Now(),
+			Name: "foo",
+			Type: "count",
+		},
+		Vals: []float64{1},
+		Sum:  1,
+	}
+
+	_ = s.Add(bkt)
 
 	b.ReportAllocs()
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		_, _ = s.Add(&snatch.Bucket{
-			ID: &snatch.ID{
-				Time: time.Now(),
-				Name: "foo",
-				Type: "count",
-			},
-			Vals: []float64{1},
-			Sum:  1,
-		})
+		_ = s.Add(bkt2)
 	}
 }
 
@@ -139,15 +150,14 @@ func TestMemStore_Scan(t *testing.T) {
 
 	bkt := &snatch.Bucket{
 		ID: &snatch.ID{
-			Time: time.Now().Add(-10 * time.Second),
+			Time: time.Now().Truncate(10 * time.Second).Add(-12 * time.Second),
 			Name: "foo",
 			Type: "test",
 		},
 	}
 	bkt.Append(2.353)
-	expired, err := s.Add(bkt)
+	err := s.Add(bkt)
 	assert.NoError(t, err)
-	assert.Equal(t, 0 ,expired)
 	bkt = &snatch.Bucket{
 		ID: &snatch.ID{
 			Time: time.Now(),
@@ -156,9 +166,8 @@ func TestMemStore_Scan(t *testing.T) {
 		},
 	}
 	bkt.Append(2.353)
-	expired, err = s.Add(bkt)
+	err = s.Add(bkt)
 	assert.NoError(t, err)
-	assert.Equal(t, 0 ,expired)
 
 	time.Sleep(2 * time.Second)
 
@@ -184,7 +193,7 @@ func TestMemStore_Flush(t *testing.T) {
 		},
 	}
 	bkt.Append(2.353)
-	_, err := s.Add(bkt)
+	err := s.Add(bkt)
 	assert.NoError(t, err)
 
 	out, err := s.Flush()
@@ -200,9 +209,9 @@ func TestMemStore_Flush(t *testing.T) {
 
 func TestMemStore_CanConcurrentlyPutAndScan(t *testing.T) {
 	s := snatch.NewStore(10 * time.Second)
-	_, _ = s.Add(&snatch.Bucket{
+	_ = s.Add(&snatch.Bucket{
 		ID: &snatch.ID{
-			Time: time.Now().Add(-10 * time.Second),
+			Time: time.Now().Truncate(10 * time.Second).Add(-12 * time.Second),
 			Name: "foo",
 			Type: "count",
 		},
@@ -220,7 +229,7 @@ func TestMemStore_CanConcurrentlyPutAndScan(t *testing.T) {
 				return
 
 			default:
-				_, _ = s.Add(&snatch.Bucket{
+				_ = s.Add(&snatch.Bucket{
 					ID: &snatch.ID{
 						Time: time.Now(),
 						Name: "foo",

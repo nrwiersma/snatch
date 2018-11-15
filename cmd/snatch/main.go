@@ -16,6 +16,9 @@ const (
 
 	flagResolution = "res"
 
+	flagParserBatch = "parser.batch"
+	flagParserAllowPending = "parser.allow-pending"
+
 	flagConfig = "config"
 )
 
@@ -30,6 +33,16 @@ var flags = []cli.Flag{
 		Name:  flagResolution,
 		Value: 10 * time.Second,
 		Usage: "The time resolution of metrics",
+	}),
+	altsrc.NewIntFlag(&cli.IntFlag{
+		Name:  flagParserBatch,
+		Value: 2000,
+		Usage: "The parsers batch buffer size",
+	}),
+	altsrc.NewIntFlag(&cli.IntFlag{
+		Name:  flagParserAllowPending,
+		Value: 1000,
+		Usage: "The number of batches allowed to be queued",
 	}),
 	&cli.StringFlag{
 		Name:  flagConfig,

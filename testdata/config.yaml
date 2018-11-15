@@ -1,2 +1,5 @@
 db: http://localhost:8086/metrics
 res: 10s
+parser:
+  batch: 2000
+  allow-pending: 1000

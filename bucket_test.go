@@ -22,7 +22,7 @@ func TestId_Keys(t *testing.T) {
 	assert.Equal(t, "counter:test:foo,bar", key)
 }
 
-func BenchmarkId_Keys(b *testing.B) {
+func BenchmarkID_Keys(b *testing.B) {
 	id := &snatch.ID{
 		Time: time.Unix(414631410, 0),
 		Name: "test",
@@ -59,4 +59,31 @@ func TestBucket_Merge(t *testing.T) {
 
 	assert.Equal(t, []float64{1.2, 0.8}, b.Vals)
 	assert.Equal(t, 2.0, b.Sum)
+}
+
+func BenchmarkBucket_Merge(b *testing.B) {
+	bkt := &snatch.Bucket{
+		ID: &snatch.ID{
+			Time: time.Now(),
+			Name: "foo",
+			Type: "test",
+		},
+	}
+	bkt.Append(1)
+
+	bkt2 := &snatch.Bucket{
+		ID: &snatch.ID{
+			Time: time.Now(),
+			Name: "foo",
+			Type: "test",
+		},
+	}
+	bkt2.Append(1)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		bkt.Merge(bkt2)
+	}
 }

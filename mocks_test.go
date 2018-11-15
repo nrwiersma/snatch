@@ -26,9 +26,9 @@ type mockStore struct {
 	mock.Mock
 }
 
-func (m *mockStore) Add(bkts ...*snatch.Bucket) (int, error) {
+func (m *mockStore) Add(bkts ...*snatch.Bucket) error {
 	args := m.Called(bkts)
-	return args.Int(0), args.Error(1)
+	return args.Error(0)
 }
 
 func (m *mockStore) Scan() (out <-chan *snatch.Bucket, err error) {

@@ -22,47 +22,47 @@ func TestNewApplication(t *testing.T) {
 
 func TestApplication_Parse(t *testing.T) {
 	b := []byte(`test
-t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10
-t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10`)
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+`)
 
 	db := new(mockDB)
 	s := new(mockStore)
-	s.On("Add", mock.Anything).Return(0, nil)
+	s.On("Add", mock.Anything).Return(nil)
 	app := snatch.NewApplication(10*time.Second, db, s)
+	opts := snatch.ParseOpts{BufferSize:10, AllowedPending: 2}
 
-	err := app.Parse(bytes.NewReader(b), func(b []byte) {
+	err := app.Parse(bytes.NewReader(b), opts, func(b []byte) {
 		assert.Equal(t, []byte("test\n"), b)
 	})
 
 	assert.NoError(t, err)
+	s.AssertExpectations(t)
 }
 
-func TestApplication_ParseError(t *testing.T) {
-	b := []byte(`t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10`)
+func TestApplication_ParseDropsLines(t *testing.T) {
+	b := []byte(`test
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+lvl=info msg= count#test=2 foo="bar" size=10
+`)
 
 	db := new(mockDB)
 	s := new(mockStore)
-	s.On("Add", mock.Anything).Return(3, nil)
+	s.On("Add", mock.Anything).Return(nil)
 	app := snatch.NewApplication(10*time.Second, db, s)
+	opts := snatch.ParseOpts{BufferSize:10, AllowedPending: 1}
 
-	err := app.Parse(bytes.NewReader(b), func(b []byte) {
-		assert.Equal(t, []byte("snatch: dropped expired lines\n"), b)
+	err := app.Parse(bytes.NewReader(b), opts, func(b []byte) {
+		assert.Equal(t, []byte("test\n"), b)
 	})
 
 	assert.NoError(t, err)
-}
-
-func TestApplication_ParseStoreError(t *testing.T) {
-	b := []byte(`t="1983-02-21T01:23:45-0400" lvl=info msg= count#test=2 foo="bar" size=10`)
-
-	db := new(mockDB)
-	s := new(mockStore)
-	s.On("Add", mock.Anything).Return(0, errors.New("test"))
-	app := snatch.NewApplication(10*time.Second, db, s)
-
-	err := app.Parse(bytes.NewReader(b), func(b []byte) {})
-
-	assert.Error(t, err)
+	s.AssertExpectations(t)
 }
 
 func TestApplication_Scan(t *testing.T) {

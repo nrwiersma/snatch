@@ -2,7 +2,10 @@ package snatch
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -22,36 +25,87 @@ func NewApplication(res time.Duration, db DB, s Store) *Application {
 	}
 }
 
+type ParseOpts struct {
+	BufferSize     int
+	AllowedPending int
+}
+
+var parserPool = sync.Pool{New: func() interface{} { return &bytes.Buffer{} }}
+
 // Parse parses lines from the Reader, adding them to the Store.
-func (a *Application) Parse(r io.Reader, fn func([]byte)) error {
+func (a *Application) Parse(r io.Reader, opts ParseOpts, errFn func([]byte)) error {
+	drops := 0
+	wg := sync.WaitGroup{}
+	in := make(chan *bytes.Buffer, opts.AllowedPending)
+	buf := parserPool.Get().(*bytes.Buffer)
+
+	wg.Add(1)
+	go a.parseBuffers(in, &wg, errFn)
+
 	rd := bufio.NewReader(r)
-
 	for {
-		line, err := rd.ReadBytes('\n')
-		if len(line) > 0 {
-			bkts, err := a.p.Parse(line)
-			if err != nil || len(bkts) == 0 {
-				fn(line)
-				continue
-			}
-
-			expired, err := a.s.Add(bkts...)
-			if err != nil {
-				return err
-			}
-
-			if expired > 0 {
-				fn([]byte("snatch: dropped expired lines\n"))
-			}
-		}
-
+		b, err := rd.ReadSlice('\n')
 		if err != nil {
 			if err == io.EOF {
-				return nil
+				break
 			}
 
 			return err
 		}
+
+		buf.Write(b)
+
+		if buf.Len() < opts.BufferSize {
+			continue
+		}
+
+		// Swap buffers
+		select {
+		case in <- buf:
+		default:
+			parserPool.Put(buf)
+			drops++
+			if drops == 1 || opts.AllowedPending == 0 || drops%opts.AllowedPending == 0 {
+				fmt.Printf("snatch: message queue full. Dropped %d messages so far.\n", drops)
+
+			}
+		}
+
+		buf = parserPool.Get().(*bytes.Buffer)
+	}
+
+	if buf.Len() > 0 {
+		in <- buf
+	}
+
+	close(in)
+	wg.Wait()
+
+	return nil
+}
+
+func (a *Application) parseBuffers(in chan *bytes.Buffer, wg *sync.WaitGroup, errFn func([]byte)) {
+	defer wg.Done()
+
+	for buf := range in {
+		for {
+			b, err := buf.ReadBytes('\n')
+			if len(b) > 0 {
+				bkts, err := a.p.Parse(b)
+				if err != nil || len(bkts) == 0 {
+					errFn(b)
+					continue
+				}
+
+				_ = a.s.Add(bkts...)
+			}
+
+			if err != nil {
+				break
+			}
+		}
+
+		parserPool.Put(buf)
 	}
 }
 

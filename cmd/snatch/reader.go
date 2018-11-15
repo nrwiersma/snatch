@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"time"
 
+	"github.com/nrwiersma/snatch"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -26,15 +28,20 @@ func runReader(c *cli.Context) error {
 	defer scan.Stop()
 	go func() {
 		for range scan.C {
-			if err := app.Flush(); err != nil {
+			if err := app.Scan(); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
 		}
 	}()
 
-	err = app.Parse(os.Stdin, handleInvalidLine)
-	if err != nil {
+	opts := snatch.ParseOpts{
+		BufferSize:     c.Int(flagParserBatch),
+		AllowedPending: c.Int(flagParserAllowPending),
+	}
+
+	err = app.Parse(os.Stdin, opts, handleInvalidLine)
+	if err != nil && err != io.EOF {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

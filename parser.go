@@ -16,15 +16,13 @@ var (
 
 	measureSeparator = []byte{'#'}
 	rateSeparator    = []byte{'@'}
-
-	timeFormat = "2006-01-02T15:04:05-0700"
 )
 
 type tuples []*tuple
 
 // HandleLogfmt implements the logfmt.Handler interface.
 func (t *tuples) HandleLogfmt(k, v []byte) error {
-	if bytes.Equal(k, levelKey) || bytes.Equal(k, msgKey) {
+	if bytes.Equal(k, timeKey) || bytes.Equal(k, levelKey) || bytes.Equal(k, msgKey) {
 		return nil
 	}
 
@@ -113,11 +111,6 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 	tags := make([]string, 0, len(p.s.Tuples)*2)
 	bkts := make([]*Bucket, 0, 2)
 	for _, t := range p.s.Tuples {
-		if bytes.Equal(t.Key, timeKey) {
-			ts = p.parseTime(t.Val)
-			continue
-		}
-
 		if bytes.Contains(t.Key, measureSeparator) {
 			bkt, err := p.parseMetric(t)
 			if err != nil {
@@ -130,26 +123,13 @@ func (p *Parser) Parse(b []byte) ([]*Bucket, error) {
 		tags = append(tags, t.Name(), t.String())
 	}
 
-	if ts.IsZero() {
-		ts = time.Now()
-	}
-	ts = time.Unix(0, int64((time.Duration(ts.UnixNano())/p.res)*p.res))
-
+	ts = time.Now().Truncate(p.res)
 	for _, bkt := range bkts {
 		bkt.ID.Time = ts
 		bkt.ID.Tags = tags
 	}
 
 	return bkts, nil
-}
-
-func (p *Parser) parseTime(b []byte) time.Time {
-	ts, err := time.Parse(timeFormat, string(b))
-	if err != nil {
-		return time.Time{}
-	}
-
-	return ts
 }
 
 func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
@@ -202,14 +182,11 @@ func (p *Parser) parseMetric(t *tuple) (*Bucket, error) {
 }
 
 func (p *Parser) splitRate(b []byte) ([]byte, float64) {
-	if !bytes.Contains(b, rateSeparator) {
+	i := bytes.Index(b, rateSeparator)
+	if i < 0 {
 		return b, 0
 	}
 
-	split := bytes.SplitN(b, rateSeparator, 2)
-	if f, err := strconv.ParseFloat(string(split[1]), 64); err == nil {
-		return split[0], f
-	}
-
-	return split[0], 0
+	f, _ := strconv.ParseFloat(string(b[i+1:]), 64)
+	return b[:i], f
 }
