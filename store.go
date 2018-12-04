@@ -1,6 +1,7 @@
 package snatch
 
 import (
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,8 @@ type Store interface {
 }
 
 type memStore struct {
+	sync.Mutex
+
 	res time.Duration
 
 	store map[int64]map[string]*Bucket
@@ -30,6 +33,8 @@ func NewStore(res time.Duration) Store {
 
 // Add adds Buckets into the Store.
 func (s *memStore) Add(bkts ...*Bucket) error {
+	s.Lock()
+
 	for _, bkt := range bkts {
 		ts, key := bkt.ID.Keys()
 
@@ -49,11 +54,15 @@ func (s *memStore) Add(bkts ...*Bucket) error {
 		box[key] = bkt
 	}
 
+	s.Unlock()
+
 	return nil
 }
 
 // Scan scans the store for complete Buckets.
 func (s *memStore) Scan() (<-chan *Bucket, error) {
+	s.Lock()
+
 	buckets := make(chan *Bucket, 1000)
 	go func(out chan *Bucket) {
 		ready := time.Now().Truncate(s.res).Add(-1 * (s.res + time.Second)).Unix()
@@ -70,6 +79,8 @@ func (s *memStore) Scan() (<-chan *Bucket, error) {
 		}
 
 		close(out)
+
+		s.Unlock()
 	}(buckets)
 
 	return buckets, nil
@@ -77,6 +88,8 @@ func (s *memStore) Scan() (<-chan *Bucket, error) {
 
 // Flush flushes all Buckets from the Store.
 func (s *memStore) Flush() (<-chan *Bucket, error) {
+	s.Lock()
+
 	buckets := make(chan *Bucket, 1000)
 	go func(out chan *Bucket) {
 		for ts, box := range s.store {
@@ -87,6 +100,8 @@ func (s *memStore) Flush() (<-chan *Bucket, error) {
 		}
 
 		close(out)
+
+		s.Unlock()
 	}(buckets)
 
 	return buckets, nil

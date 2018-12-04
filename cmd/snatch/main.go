@@ -16,6 +16,7 @@ const (
 
 	flagResolution = "res"
 
+	flagParserWorkers      = "parser.workers"
 	flagParserBatch        = "parser.batch"
 	flagParserAllowPending = "parser.allow-pending"
 
@@ -33,6 +34,11 @@ var flags = []cli.Flag{
 		Name:  flagResolution,
 		Value: 10 * time.Second,
 		Usage: "The time resolution of metrics",
+	}),
+	altsrc.NewIntFlag(&cli.IntFlag{
+		Name:  flagParserWorkers,
+		Value: 2,
+		Usage: "The number of parsers to run concurrently",
 	}),
 	altsrc.NewIntFlag(&cli.IntFlag{
 		Name:  flagParserBatch,

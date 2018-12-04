@@ -27,6 +27,7 @@ func NewApplication(res time.Duration, db DB, s Store) *Application {
 
 // ParseOpts repesents parser options.
 type ParseOpts struct {
+	Workers        int
 	BufferSize     int
 	AllowedPending int
 }
@@ -40,8 +41,10 @@ func (a *Application) Parse(r io.Reader, opts ParseOpts, errFn func([]byte)) err
 	in := make(chan *bytes.Buffer, opts.AllowedPending)
 	buf := parserPool.Get().(*bytes.Buffer)
 
-	wg.Add(1)
-	go a.parseBuffers(in, &wg, errFn)
+	for i := 0; i < opts.Workers; i++ {
+		wg.Add(1)
+		go a.parseBuffers(in, &wg, errFn)
+	}
 
 	rd := bufio.NewReader(r)
 	for {

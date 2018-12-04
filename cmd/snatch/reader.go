@@ -36,6 +36,7 @@ func runReader(c *cli.Context) error {
 	}()
 
 	opts := snatch.ParseOpts{
+		Workers:        c.Int(flagParserWorkers),
 		BufferSize:     c.Int(flagParserBatch),
 		AllowedPending: c.Int(flagParserAllowPending),
 	}

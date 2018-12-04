@@ -14,7 +14,7 @@ func TestNewStore(t *testing.T) {
 	assert.Implements(t, (*snatch.Store)(nil), s)
 }
 
-func TestMemStore_Put(t *testing.T) {
+func TestMemStore_Add(t *testing.T) {
 	bkts := []*snatch.Bucket{
 		{
 			ID: &snatch.ID{
@@ -67,54 +67,7 @@ func TestMemStore_Put(t *testing.T) {
 
 }
 
-func TestMemStore_PutExpired(t *testing.T) {
-	bkts := []*snatch.Bucket{
-		{
-			ID: &snatch.ID{
-				Time: time.Now().Truncate(time.Second).Add(-1 * time.Minute),
-				Name: "foo",
-				Type: "count",
-			},
-			Vals: []float64{1},
-			Sum:  1,
-		},
-		{
-			ID: &snatch.ID{
-				Time: time.Now().Truncate(time.Second).Add(-1 * time.Minute),
-				Name: "bar",
-				Type: "measure",
-			},
-			Vals: []float64{2},
-			Sum:  2,
-		},
-		{
-			ID: &snatch.ID{
-				Time: time.Now().Truncate(time.Second).Add(-1 * time.Minute),
-				Name: "bar",
-				Type: "measure",
-			},
-			Vals: []float64{3},
-			Sum:  3,
-		},
-		{
-			ID: &snatch.ID{
-				Time: time.Now().Truncate(time.Second).Add(-1 * time.Second),
-				Name: "bar",
-				Type: "measure",
-			},
-			Vals: []float64{3},
-			Sum:  3,
-		},
-	}
-	s := snatch.NewStore(10 * time.Second)
-
-	err := s.Add(bkts...)
-
-	assert.NoError(t, err)
-
-}
-
-func BenchmarkMemStore_Put(b *testing.B) {
+func BenchmarkMemStore_Add(b *testing.B) {
 	s := snatch.NewStore(10 * time.Second)
 	bkt := &snatch.Bucket{
 		ID: &snatch.ID{
